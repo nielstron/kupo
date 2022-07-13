@@ -37,7 +37,15 @@ import Kupo.Data.Cardano
     , slotNoFromText
     )
 import Kupo.Data.Database
-    ( patternToRow, patternFromRow, patternToSql, patternContainsSql, pointFromRow, resultFromRow, statusToSql )
+    ( applyStatusFlag
+    , patternToRow
+    , patternFromRow
+    , patternContainsSql
+    , patternToSql
+    , pointFromRow
+    , resultFromRow
+    , statusFlagFromQueryParams
+    )
 import Kupo.Data.Health
     ( Health )
 import Kupo.Data.Http.FilterMatchesBy
@@ -243,16 +251,17 @@ handleGetMatches
     -> Database IO
     -> Response
 handleGetMatches patternQuery queryParams Database{..} = do
-    case patternQuery >>= patternFromText of
-        Nothing ->
+    case (patternQuery >>= patternFromText, statusFlagFromQueryParams queryParams) of
+        (Nothing, _) ->
             Errors.invalidPattern
-        Just p -> do
-            let query = patternToSql p <>
-                    case statusToSql queryParams of
-                        Nothing -> ""
-                        Just q  -> " AND " <> q
+        (Just{}, Nothing) ->
+            Errors.invalidStatusFlag
+        (Just p, Just statusFlag) -> do
+            let query = applyStatusFlag statusFlag (patternToSql p)
             case filterMatchesBy queryParams of
                 Nothing ->
+                    Errors.invalidMatchFilter
+                Just NoFilter ->
                     responseStreamJson resultToJson $ \yield done -> do
                         runTransaction $ foldInputs query (yield . resultFromRow)
                         done
@@ -385,4 +394,3 @@ instance HasSeverityAnnotation TraceHttpServer where
 instance ToJSON TraceHttpServer where
     toEncoding =
         defaultGenericToEncoding
-
