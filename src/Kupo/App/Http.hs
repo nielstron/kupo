@@ -37,7 +37,7 @@ import Kupo.Data.Cardano
     , slotNoFromText
     )
 import Kupo.Data.Database
-    ( patternToRow, patternToSql, pointFromRow, resultFromRow, statusToSql )
+    ( patternToRow, patternFromRow, patternToSql, pointFromRow, resultFromRow, statusToSql )
 import Kupo.Data.Health
     ( Health )
 import Kupo.Data.Http.FilterMatchesBy
@@ -166,7 +166,7 @@ app withDatabase patternsVar readHealth req send =
             readTVarIO patternsVar >>= send . handleGetPatterns
         ("GET", args) ->
             withDatabase (send .
-                handleGetMatchingPatterns (patternFromPath args) (queryString req)
+                handleGetMatchingPatterns (patternFromPath args)
             )
         ("PUT", args) ->
             withDatabase (send <=<
@@ -306,16 +306,15 @@ handleGetPatterns patterns = do
 
 handleGetMatchingPatterns
     :: Maybe Text
-    -> Http.Query
     -> Database IO
     -> Response
-handleGetMatchingPatterns patternQuery queryParams Database{..} = do
+handleGetMatchingPatterns patternQuery Database{..} = do
     case patternQuery >>= patternFromText of
         Nothing ->
             Errors.invalidPattern
         Just p -> do
             let query = patternToSql p
-            responseStreamJson resultToJson $ \yield done -> do
+            responseStreamJson Json.text $ \yield done -> do
                 runTransaction $ selectPatterns patternFromRow query (yield . patternToText)
                 done
 
