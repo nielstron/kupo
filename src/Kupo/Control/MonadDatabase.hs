@@ -366,6 +366,9 @@ mkDatabase (fromIntegral -> longestRollback) bracketConnection = Database
         execute conn "DELETE FROM checkpoints WHERE slot_no > ?"
             [ SQLInteger (fromIntegral slotNo)
             ]
+        execute conn "UPDATE inputs SET spent_at = NULL WHERE slot_no > ?"
+            [ SQLInteger (fromIntegral slotNo)
+            ]
         query_ conn "SELECT MAX(slot_no) FROM checkpoints" >>= \case
             [[SQLInteger slotNo']] ->
                 return $ Just (fromIntegral slotNo')
