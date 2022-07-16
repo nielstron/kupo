@@ -319,10 +319,10 @@ mkDatabase (fromIntegral -> longestRollback) bracketConnection = Database
         let matchMaybeWord64 = \case
                 SQLInteger (fromIntegral -> wrd) -> Just wrd
                 _ -> Nothing
-        let qry = "SELECT output_reference, address, value, datum_hash, created_at, createdAt.header_hash, spent_at, spentAt.header_hash, LENGTH(address) as len \
+        let qry = "SELECT output_reference, address, value, datum_hash, created_at, createdAt.header_hash, spentAt.slot_no as spent_at, spentAt.header_hash, LENGTH(address) as len \
                   \FROM inputs \
                   \JOIN checkpoints AS createdAt ON createdAt.slot_no = created_at \
-                  \LEFT OUTER JOIN checkpoints AS spentAt ON spentAt.slot_no = spent_at \
+                  \LEFT OUTER JOIN checkpoints AS spentAt ON spentAt.slot_no = inputs.spent_at \
                   \WHERE address " <> addressLike <> " ORDER BY created_at DESC"
 
         -- TODO: Allow resolving datums on demand through a LEFT JOIN on binary_data.

@@ -237,6 +237,6 @@ applyStatusFlag = \case
     NoStatusFlag ->
         identity
     OnlyUnspent ->
-        (<> " AND spent_at IS NULL")
+        (<> " AND spentAt.slot_no IS NULL")
     OnlySpent ->
-        (<> " AND spent_at IS NOT NULL")
+        (<> " AND spentAt.slot_no IS NOT NULL")
