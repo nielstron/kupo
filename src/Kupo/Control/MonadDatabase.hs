@@ -431,6 +431,9 @@ mkDatabase (fromIntegral -> longestRollback) bracketConnection = Database
         execute conn "DELETE FROM inputs WHERE created_at > ?"
             [ SQLInteger (fromIntegral slotNo)
             ]
+        execute conn "UPDATE inputs SET spent_at = NULL WHERE spent_at > ?"
+            [ SQLInteger (fromIntegral slotNo)
+            ]
         execute conn "DELETE FROM checkpoints WHERE slot_no > ?"
             [ SQLInteger (fromIntegral slotNo)
             ]
