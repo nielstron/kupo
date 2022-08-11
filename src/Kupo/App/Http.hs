@@ -165,6 +165,9 @@ app withDatabase forceRollback patternsVar readHealth req send =
         ("patterns" : args) ->
             routePatterns (requestMethod req, args)
 
+        ("outputs" : args) ->
+            routeOutputs (requestMethod req, args)
+
         ("v1" : args) ->
             route args
 
@@ -278,6 +281,22 @@ app withDatabase forceRollback patternsVar readHealth req send =
                             patternsVar
                             (patternFromPath args)
                             db
+        (_, _) ->
+            send Errors.methodNotAllowed
+
+    routeOutputs = \case
+        ("GET", []) -> do
+            res <- handleGetPatterns
+                        <$> responseHeaders readHealth
+                        <*> pure (Just wildcard)
+                        <*> fmap const (readTVarIO patternsVar)
+            send res
+        ("GET", args) -> do
+            res <- handleGetOutputs
+                        <$> responseHeaders readHealth
+                        <*> pure (patternFromPath args)
+                        <*> fmap (flip included) (readTVarIO patternsVar)
+            send res
         (_, _) ->
             send Errors.methodNotAllowed
 
@@ -562,6 +581,25 @@ handlePutPattern headers readHealth forceRollback patternsVar mPointOrSlot query
                 atomically (putTMVar response Errors.failedToRollback)
             }
         atomically (takeTMVar response)
+
+--
+-- /patterns
+--
+
+handleGetOutputs
+    :: [Http.Header]
+    -> Maybe Text
+    -> (Pattern -> [Pattern])
+    -> Response
+handleGetOutputs headers patternQuery patterns = do
+    case patternQuery >>= outputReferenceFromText of
+        Nothing ->
+            Errors.invalidPattern
+        Just p -> do
+            responseStreamJson headers Json.text $ \yield done -> do
+                mapM_ (yield . patternToText) (patterns p)
+                done
+
 
 --
 -- Helpers

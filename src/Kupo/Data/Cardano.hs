@@ -690,6 +690,14 @@ transactionIdFromText =
     fmap transactionIdFromHash . hashFromTextAsHex @Blake2b_256
 {-# INLINABLE transactionIdFromText #-}
 
+outputReferenceFromText :: Text -> Maybe OutputReference
+outputReferenceFromText txt =
+    case T.splitOn "/" txt of
+        [txId, outputIndex] -> do
+            pure (mkOutputReference <$> transactionIdFromText txId <.> outputIndexFromText outputIndex)
+        _ ->
+            empty
+
 -- Output
 
 type Output =
